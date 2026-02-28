@@ -1,0 +1,6 @@
+package: generated
+generate:
+  - types
+  - server
+  - spec
+output: internal/api/generated/models.gen.go
