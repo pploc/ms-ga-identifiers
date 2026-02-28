@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: MS GA Identifier API
+  description: Identity Service API for user authentication and authorization
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081/identity
+    description: Local development server
+
+paths:
+  /register:
+    post:
+      summary: Register a new user
+      operationId: register
+      tags:
+        - Identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - first_name
+                - last_name
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Validation error
+        "409":
+          description: Email already registered
+
+  /login:
+    post:
+      summary: User login
+      operationId: login
+      tags:
+        - Identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                device_info:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Account locked or suspended
+        "429":
+          description: Too many failed attempts
+
+  /refresh:
+    post:
+      summary: Refresh access token
+      operationId: refreshToken
+      tags:
+        - Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          description: Invalid or expired refresh token
+
+  /logout:
+    post:
+      summary: User logout
+      operationId: logout
+      tags:
+        - Identity
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Logout successful
+
+  /me:
+    get:
+      summary: Get current user info
+      operationId: getCurrentUser
+      tags:
+        - Identity
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User info retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfoResponse"
+
+  /change-password:
+    post:
+      summary: Change password
+      operationId: changePassword
+      tags:
+        - Identity
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Password changed successfully
+
+  /forgot-password:
+    post:
+      summary: Request password reset
+      operationId: forgotPassword
+      tags:
+        - Password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Reset link sent if email exists
+
+  /reset-password:
+    post:
+      summary: Reset password
+      operationId: resetPassword
+      tags:
+        - Password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - new_password
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Invalid or expired token
+
+  /verify-email/{token}:
+    get:
+      summary: Verify email address
+      operationId: verifyEmail
+      tags:
+        - Identity
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified successfully
+        "400":
+          description: Invalid or expired token
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            message:
+              type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+            expires_in:
+              type: integer
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            expires_in:
+              type: integer
+
+    UserInfoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            email:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
