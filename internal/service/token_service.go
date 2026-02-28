@@ -74,11 +74,11 @@ func (s *TokenService) RefreshToken(ctx context.Context, refreshToken string) (*
 	// Get fresh roles and permissions from auth service
 	roles, permissions, err := s.authClient.ExtractRolesAndPermissions(identity.UserID)
 	if err != nil {
-		utils.Error("Failed to get roles and permissions during token refresh", utils.Error(err.Error()))
+		utils.Errorf("Failed to get roles and permissions during token refresh", utils.ErrorField(err.Error()))
 	}
 
 	// Issue new access token
-	accessToken, err := s.jwtUtil.GenerateToken(identity.UserID, identity.Email, roles, permissions)
+	accessToken, err := s.jwtUtil.GenerateToken(identity.UserID.String(), identity.Email, roles, permissions)
 	if err != nil {
 		return nil, err
 	}

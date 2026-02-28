@@ -20,9 +20,9 @@ type AuthClient struct {
 	client  *http.Client
 }
 
-func NewAuthClient(cfg *config.AuthServiceConfig) *AuthClient {
+func NewAuthClient(cfg *config.AuthConfig) *AuthClient {
 	return &AuthClient{
-		baseURL: cfg.BaseURL,
+		baseURL: cfg.ServiceURL,
 		client:  &http.Client{},
 	}
 }
@@ -60,7 +60,7 @@ func (c *AuthClient) GetUserRolesAndPermissions(userID uuid.UUID) ([]RolePermiss
 func (c *AuthClient) ExtractRolesAndPermissions(userID uuid.UUID) ([]string, []string, error) {
 	rolePerms, err := c.GetUserRolesAndPermissions(userID)
 	if err != nil {
-		utils.Error("Failed to get roles and permissions", utils.Error(err.Error()))
+		utils.Errorf("Failed to get roles and permissions", utils.ErrorField(err.Error()))
 		// Return empty roles/permissions if auth service is unavailable
 		return []string{}, []string{}, nil
 	}

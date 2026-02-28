@@ -8,6 +8,7 @@ import (
 
 type Response struct {
 	Success bool        `json:"success"`
+	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 	Error   *ErrorDetail `json:"error,omitempty"`
 }
@@ -24,7 +25,7 @@ func SuccessResponse(c *gin.Context, statusCode int, data interface{}) {
 	})
 }
 
-func ErrorResponse(c *gin.Context, statusCode int, code, message string) {
+func ErrorResponse(c *gin.Context, statusCode int, code string, message string) {
 	c.JSON(statusCode, Response{
 		Success: false,
 		Error: &ErrorDetail{
@@ -50,12 +51,12 @@ func NotFound(c *gin.Context, message string) {
 	ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", message)
 }
 
-func Conflict(c *gin.Context, message string) {
-	ErrorResponse(c, http.StatusConflict, "CONFLICT", message)
+func InternalServerError(c *gin.Context, message string) {
+	ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", message)
 }
 
-func InternalServerError(c *gin.Context, message string) {
-	ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", message)
+func Conflict(c *gin.Context, message string) {
+	ErrorResponse(c, http.StatusConflict, "CONFLICT", message)
 }
 
 func TooManyRequests(c *gin.Context, message string) {

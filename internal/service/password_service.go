@@ -68,7 +68,7 @@ func (s *PasswordService) ForgotPassword(ctx context.Context, email string) (*Fo
 
 	// In production, send email with reset link
 	// For now, just log the token (in development)
-	utils.Info("Password reset token generated", utils.Error("token: "+token))
+	utils.Info("Password reset token generated", utils.String("token", token))
 
 	return &ForgotPasswordResponse{
 		Message: "If the email exists, a reset link has been sent.",

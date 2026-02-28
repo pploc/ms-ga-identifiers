@@ -4,111 +4,151 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	Kafka    KafkaConfig
-	JWT      JWTConfig
-	Auth     AuthServiceConfig
+	Server   ServerConfig   `yaml:"server"`
+	Database DatabaseConfig `yaml:"database"`
+	Redis    RedisConfig    `yaml:"redis"`
+	JWT      JWTConfig      `yaml:"jwt"`
+	Auth     AuthConfig     `yaml:"auth"`
+	Kafka    KafkaConfig    `yaml:"kafka"`
 }
 
 type ServerConfig struct {
-	Port     string
-	BasePath string
-	Env      string
+	Port string `yaml:"port"`
+	Env  string `yaml:"env"`
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"sslmode"`
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
-}
-
-type KafkaConfig struct {
-	Brokers []string
-	Topic   string
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
 }
 
 type JWTConfig struct {
-	Secret          string
-	ExpirationTime  time.Duration
-	RefreshDuration time.Duration
+	Secret         string        `yaml:"secret"`
+	ExpirationTime time.Duration `yaml:"expiration_time"`
+	RefreshDuration time.Duration `yaml:"refresh_duration"`
 }
 
-type AuthServiceConfig struct {
-	BaseURL string
+type AuthConfig struct {
+	ServiceURL string `yaml:"service_url"`
+	Timeout    int    `yaml:"timeout"`
+}
+
+type KafkaConfig struct {
+	Brokers []string `yaml:"brokers"`
+	Topic   string   `yaml:"topic"`
 }
 
 func Load() *Config {
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		configFile = "config.yaml"
+	}
+
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		// Return default config if file doesn't exist
+		return defaultConfig()
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return defaultConfig()
+	}
+
+	// Override with environment variables if set
+	overrideFromEnv(&cfg)
+
+	return &cfg
+}
+
+func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:     getEnv("PORT", "8081"),
-			BasePath: getEnv("BASE_PATH", "/identity"),
-			Env:      getEnv("APP_ENV", "development"),
+			Port: "8080",
+			Env:  "development",
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASS", "postgres"),
-			DBName:   getEnv("DB_NAME", "identifier_db"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+			Host:     "localhost",
+			Port:     5432,
+			User:     "postgres",
+			Password: "postgres",
+			DBName:   "ms_ga_identifier",
+			SSLMode:  "disable",
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnvAsInt("REDIS_PORT", 6379),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
-		},
-		Kafka: KafkaConfig{
-			Brokers: []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
-			Topic:   getEnv("KAFKA_TOPIC", "identity-events"),
+			Host:     "localhost",
+			Port:     6379,
+			Password: "",
+			DB:       0,
 		},
 		JWT: JWTConfig{
-			Secret:          getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-			ExpirationTime:  getEnvAsDuration("JWT_EXPIRATION", 15*time.Minute),
-			RefreshDuration: getEnvAsDuration("JWT_REFRESH_DURATION", 7*24*time.Hour),
+			Secret:          "your-secret-key-change-in-production",
+			ExpirationTime:  24 * time.Hour,
+			RefreshDuration: 7 * 24 * time.Hour,
 		},
-		Auth: AuthServiceConfig{
-			BaseURL: getEnv("AUTH_SERVICE_URL", "http://localhost:8082"),
+		Auth: AuthConfig{
+			ServiceURL: "http://localhost:8081",
+			Timeout:    30,
+		},
+		Kafka: KafkaConfig{
+			Brokers: []string{"localhost:9092"},
+			Topic:   "identity-events",
 		},
 	}
 }
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+func overrideFromEnv(cfg *Config) {
+	if v := os.Getenv("SERVER_PORT"); v != "" {
+		cfg.Server.Port = v
 	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
+	if v := os.Getenv("SERVER_ENV"); v != "" {
+		cfg.Server.Env = v
+	}
+	if v := os.Getenv("DB_HOST"); v != "" {
+		cfg.Database.Host = v
+	}
+	if v := os.Getenv("DB_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.Database.Port = port
 		}
 	}
-	return defaultValue
-}
-
-func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
+	if v := os.Getenv("DB_USER"); v != "" {
+		cfg.Database.User = v
+	}
+	if v := os.Getenv("DB_PASSWORD"); v != "" {
+		cfg.Database.Password = v
+	}
+	if v := os.Getenv("DB_NAME"); v != "" {
+		cfg.Database.DBName = v
+	}
+	if v := os.Getenv("REDIS_HOST"); v != "" {
+		cfg.Redis.Host = v
+	}
+	if v := os.Getenv("REDIS_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.Redis.Port = port
 		}
 	}
-	return defaultValue
+	if v := os.Getenv("JWT_SECRET"); v != "" {
+		cfg.JWT.Secret = v
+	}
+	if v := os.Getenv("AUTH_SERVICE_URL"); v != "" {
+		cfg.Auth.ServiceURL = v
+	}
 }

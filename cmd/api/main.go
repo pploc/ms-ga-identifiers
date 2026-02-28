@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gym-api/ms-ga-identifier/internal/api/handler"
 	"github.com/gym-api/ms-ga-identifier/internal/api/router"
 	"github.com/gym-api/ms-ga-identifier/internal/infrastructure/external"
 	"github.com/gym-api/ms-ga-identifier/internal/infrastructure/messaging"
@@ -31,18 +32,18 @@ func main() {
 	}
 	defer utils.SyncLogger()
 
-	utils.Info("Starting ms-ga-identifier service", utils.Error("environment: "+cfg.Server.Env))
+	utils.Info("Starting ms-ga-identifier service", utils.String("environment", cfg.Server.Env))
 
 	// Initialize database
 	db, err := database.NewPostgresDB(&cfg.Database)
 	if err != nil {
-		utils.Fatal("Failed to connect to database", utils.Error(err.Error()))
+		utils.Fatal("Failed to connect to database", utils.ErrorField(err.Error()))
 	}
 
 	// Initialize Redis (optional, for caching and rate limiting)
 	redisClient, err := redis.NewRedisClient(&cfg.Redis)
 	if err != nil {
-		utils.Warn("Failed to connect to Redis, continuing without it", utils.Error(err.Error()))
+		utils.Warn("Failed to connect to Redis, continuing without it", utils.ErrorField(err.Error()))
 		redisClient = nil
 	}
 
@@ -95,8 +96,13 @@ func main() {
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtUtil)
 
+	// Initialize handlers
+	identityHandler := handler.NewIdentityHandler(identityService)
+	tokenHandler := handler.NewTokenHandler(tokenService)
+	passwordHandler := handler.NewPasswordHandler(passwordService)
+
 	// Initialize router
-	r := router.NewRouter(identityService, tokenService, passwordService, authMiddleware, cfg)
+	r := router.NewRouter(identityHandler, tokenHandler, passwordHandler, authMiddleware, cfg)
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -106,9 +112,9 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		utils.Info("Starting HTTP server", utils.Error("port: "+cfg.Server.Port))
+		utils.Info("Starting HTTP server", utils.String("port", cfg.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			utils.Fatal("Failed to start HTTP server", utils.Error(err.Error()))
+			utils.Fatal("Failed to start HTTP server", utils.ErrorField(err.Error()))
 		}
 	}()
 
@@ -124,7 +130,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		utils.Fatal("Server forced to shutdown", utils.Error(err.Error()))
+		utils.Fatal("Server forced to shutdown", utils.ErrorField(err.Error()))
 	}
 
 	// Close Redis connection

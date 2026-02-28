@@ -153,11 +153,11 @@ func (s *IdentityService) Login(ctx context.Context, req LoginRequest) (*LoginRe
 	// Get roles and permissions from auth service
 	roles, permissions, err := s.authClient.ExtractRolesAndPermissions(identity.UserID)
 	if err != nil {
-		utils.Error("Failed to get roles and permissions", utils.Error(err.Error()))
+		utils.Errorf("Failed to get roles and permissions", utils.ErrorField(err.Error()))
 	}
 
 	// Generate JWT
-	accessToken, err := s.jwtUtil.GenerateToken(identity.UserID, identity.Email, roles, permissions)
+	accessToken, err := s.jwtUtil.GenerateToken(identity.UserID.String(), identity.Email, roles, permissions)
 	if err != nil {
 		return nil, err
 	}

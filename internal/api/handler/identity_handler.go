@@ -81,6 +81,7 @@ func (h *IdentityHandler) Logout(c *gin.Context) {
 
 	// Get user ID from context (need to parse from JWT)
 	// For now, we'll implement basic logout
+	_ = userID // Suppress unused variable warning
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
@@ -116,5 +117,7 @@ func (h *IdentityHandler) VerifyEmail(c *gin.Context) {
 	token := c.Param("token")
 
 	// Implement email verification logic
+	_ = token // Suppress unused variable warning
+
 	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Email verified successfully"})
 }

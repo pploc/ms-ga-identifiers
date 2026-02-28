@@ -50,7 +50,7 @@ func (r *Router) setupRoutes() {
 	})
 
 	// API routes
-	api := r.engine.Group(r.cfg.Server.BasePath)
+	api := r.engine.Group("/api/v1")
 	{
 		// Public endpoints
 		public := api.Group("")
