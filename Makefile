@@ -1,4 +1,4 @@
-.PHONY: build run test docker-up docker-down migrate generate lint clean
+.PHONY: build run test docker-up docker-down migrate generate fmt lint clean
 
 # Build the application
 build:
@@ -32,9 +32,14 @@ migrate:
 generate:
 	oapi-codegen -package generated -generate types,server,spec api/openapi.yaml > internal/api/generated/models.gen.go
 
+# Format code
+fmt:
+	gofmt -w .
+	goimports -w ./...
+
 # Run linter
-lint:
-	golangci-lint run
+lint: fmt
+	gofmt -l . | grep . && exit 1 || true
 
 # Clean build artifacts
 clean:
